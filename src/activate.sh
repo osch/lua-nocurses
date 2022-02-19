@@ -23,18 +23,9 @@ else
     default_version=""
     if which lua > /dev/null 2>&1; then
         default_version=$(lua -e 'v=_VERSION:gsub("^Lua ","");print(v)')
-        echo "Setting path for lua (version=$default_version)"
-        if [ "$default_version" = "5.1" ]; then
-            export LUA_PATH="$add_lua_path;$(lua -e 'print(package.path)')"
-            export LUA_CPATH="$add_lua_cpath/lua5.1/?.so;$(lua -e 'print(package.cpath)')"
-        else
-            lua_path_vers=$(echo $default_version|sed 's/\./_/')
-            eval "export LUA_PATH_$lua_path_vers=\"$add_lua_path;$(lua -e 'print(package.path)')\""
-            eval "export LUA_CPATH_$lua_path_vers=\"$add_lua_cpath/lua$default_version/?.so;$(lua -e 'print(package.cpath)')\""
-        fi
     fi
     
-    for vers in 5.1 5.2 5.3; do
+    for vers in 5.4 5.3 5.2 5.1; do
         lua_cmd=""
         if which lua$vers > /dev/null 2>&1; then
             lua_cmd="lua$vers"
@@ -56,6 +47,18 @@ else
             fi
         fi
     done
+    
+    if [ -n "$default_version" ]; then
+        echo "Setting path for lua (version=$default_version)"
+        if [ "$default_version" = "5.1" ]; then
+            export LUA_PATH="$add_lua_path;$(lua -e 'print(package.path)')"
+            export LUA_CPATH="$add_lua_cpath/lua5.1/?.so;$(lua -e 'print(package.cpath)')"
+        else
+            lua_path_vers=$(echo $default_version|sed 's/\./_/')
+            eval "export LUA_PATH_$lua_path_vers=\"$add_lua_path;$(lua -e 'print(package.path)')\""
+            eval "export LUA_CPATH_$lua_path_vers=\"$add_lua_cpath/lua$default_version/?.so;$(lua -e 'print(package.cpath)')\""
+        fi
+    fi
 fi
 
 unset lua_cmd this_dir luanocurses_dir add_lua_path add_lua_cpath lua_version lua_path_vers vers default_version

@@ -36,8 +36,10 @@ Supported platforms: Linux, MacOS and Cygwin.
      Uses [llthreads2] for thread creation and connects the 
      `nocurses` lua module as notifier to a [mtmsg] buffer object 
      for receiving messages from the background thread. 
-     (This is done by implementing the *Notify C API*, 
+     (This is done by implementing the [Notify C API], 
       see: [src/notify_capi.h](./src/notify_capi.h))
+
+  [Notify C API]: https://github.com/lua-capis/lua-notify-capi
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
