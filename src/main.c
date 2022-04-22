@@ -301,8 +301,15 @@ static int Nocurses_gettermsize(lua_State* L)
 
 static int Nocurses_getch(lua_State* L)
 {
+    double timeout = -1;
+    if (!lua_isnoneornil(L, 1)) {
+        timeout = luaL_checknumber(L, 1);
+        if (timeout < 0){
+            timeout = 0;
+        }
+    }
 #if defined(__unix__)
-    bool hasInput = waitForInput(-1);
+    bool hasInput = waitForInput(timeout);
     if (hasInput) {
         lua_pushinteger(L, getch());
     } else {
@@ -318,8 +325,15 @@ static int Nocurses_getch(lua_State* L)
 
 static int Nocurses_getche(lua_State* L)
 {
+    double timeout = -1;
+    if (!lua_isnoneornil(L, 1)) {
+        timeout = luaL_checknumber(L, 1);
+        if (timeout < 0){
+            timeout = 0;
+        }
+    }
 #if defined(__unix__)
-    bool hasInput = waitForInput(-1);
+    bool hasInput = waitForInput(timeout);
     if (hasInput) {
         lua_pushinteger(L, getche());
     } else {
