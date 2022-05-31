@@ -46,7 +46,9 @@ static void sendAwake()
 {
     if (awake_fds[0] >= 0) {
       char c = 0;
-      write(awake_fds[1], &c, 1);
+      if (write(awake_fds[1], &c, 1) != 1) {
+        // ignore
+      }
     }
 }
 
@@ -81,7 +83,9 @@ static bool drainAwakePipe()
         if (ret > 0 && FD_ISSET(afd, &fds)) {
             hasAwake = true;
             char buf[128];
-            read(afd, buf, sizeof(buf));
+            if (read(afd, buf, sizeof(buf)) < 0) {
+                // ignore
+            }
         }
     }
     return hasAwake;
