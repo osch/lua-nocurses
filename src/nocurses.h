@@ -173,7 +173,7 @@ static struct termsize gettermsize(){
 static int getch(){
 #ifdef _WIN32
     HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
-    if (h == NULL) return EOF;
+    if (input == NULL) return EOF;
 
     DWORD oldmode;
     GetConsoleMode(input, &oldmode);
