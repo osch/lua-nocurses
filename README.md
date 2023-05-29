@@ -39,6 +39,11 @@ Supported platforms: Linux, MacOS and Cygwin.
      (This is done by implementing the [Notify C API], 
       see: [src/notify_capi.h](./src/notify_capi.h))
 
+   * [`example04.lua`](./examples/example04.lua)
+   
+     Demonstrates how to read keystrokes with multibyte sequences
+     (arrow keys).
+   
 <!-- ---------------------------------------------------------------------------------------- -->
 
 ## Documentation

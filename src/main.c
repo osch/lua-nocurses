@@ -34,7 +34,10 @@ static AtomicCounter initStage = 0;
 
 #if defined(__unix__)    
 
-static int  awake_fds[2];
+static int            nc_awake_fds[2];
+static unsigned char  nc_readbuffer[128];
+static size_t         nc_readlen = 0;
+static size_t         nc_readpos = 0;
 
 #endif /* __unix__ */
 
@@ -44,9 +47,9 @@ static int  awake_fds[2];
 
 static void sendAwake()
 {
-    if (awake_fds[0] >= 0) {
+    if (nc_awake_fds[0] >= 0) {
       char c = 0;
-      if (write(awake_fds[1], &c, 1) != 1) {
+      if (write(nc_awake_fds[1], &c, 1) != 1) {
         // ignore
       }
     }
@@ -59,20 +62,20 @@ static void handleSwinch(int sig)
 
 static void initAwake()
 {
-    if (pipe(awake_fds) == 0) {
-        fcntl(awake_fds[1],
+    if (pipe(nc_awake_fds) == 0) {
+        fcntl(nc_awake_fds[1],
               F_SETFL,
-              fcntl(awake_fds[1], F_GETFL) | O_NONBLOCK);
+              fcntl(nc_awake_fds[1], F_GETFL) | O_NONBLOCK);
         signal(SIGWINCH, handleSwinch);  /* set C-signal handler */
     } else {
-        awake_fds[0] = -1;
+        nc_awake_fds[0] = -1;
     }
 }
 
 static bool drainAwakePipe()
 {
     bool hasAwake = false;
-    const int afd  = awake_fds[0];
+    const int afd  = nc_awake_fds[0];
     if (afd >= 0) {
         fd_set fds;
         int    nfds = afd + 1;
@@ -94,12 +97,15 @@ static bool drainAwakePipe()
 
 static bool waitForInput(const double timeout)
 {
+    if (nc_readpos < nc_readlen) {
+        return true;
+    }
     if (drainAwakePipe()) {
         return false;
     }
 
     const int ifd  = STDIN_FILENO;
-    const int afd  = awake_fds[0];
+    const int afd  = nc_awake_fds[0];
     int       nfds = (ifd > afd ? ifd : afd) + 1;
 
     struct termios oldattr, newattr;
@@ -130,7 +136,6 @@ static bool waitForInput(const double timeout)
     if (hasAwake || hasSignal) {
         drainAwakePipe();
     }
-
     tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
 
     return hasInput;
@@ -303,6 +308,24 @@ static int Nocurses_gettermsize(lua_State* L)
 
 /* ============================================================================================ */
 
+#if defined(__unix__)
+static int nc_getch()
+{
+    if (nc_readpos < nc_readlen) {
+        return nc_readbuffer[nc_readpos++];
+    }
+    size_t len = read(fileno(stdin), nc_readbuffer, sizeof(nc_readbuffer));
+    if (len > 0) {
+        nc_readpos = 1;
+        nc_readlen = len;
+        return nc_readbuffer[0];
+    }
+    else {
+        return -1;
+    }
+}
+#endif
+
 static int Nocurses_getch(lua_State* L)
 {
     double timeout = -1;
@@ -315,36 +338,17 @@ static int Nocurses_getch(lua_State* L)
 #if defined(__unix__)
     bool hasInput = waitForInput(timeout);
     if (hasInput) {
-        lua_pushinteger(L, getch());
+        int c = nc_getch();
+        if (c >= 0) {
+            lua_pushinteger(L, c);
+        } else {
+            lua_pushnil(L);
+        }
     } else {
         lua_pushnil(L);
     }
 #else
     lua_pushinteger(L, getch());
-#endif
-    return 1;
-}
-
-/* ============================================================================================ */
-
-static int Nocurses_getche(lua_State* L)
-{
-    double timeout = -1;
-    if (!lua_isnoneornil(L, 1)) {
-        timeout = luaL_checknumber(L, 1);
-        if (timeout < 0){
-            timeout = 0;
-        }
-    }
-#if defined(__unix__)
-    bool hasInput = waitForInput(timeout);
-    if (hasInput) {
-        lua_pushinteger(L, getche());
-    } else {
-        lua_pushnil(L);
-    }
-#else
-    lua_pushinteger(L, getche());
 #endif
     return 1;
 }
@@ -447,7 +451,6 @@ static const luaL_Reg ModuleFunctions[] =
     { "setcurshape",    Nocurses_setcurshape  },
     { "gettermsize",    Nocurses_gettermsize  },
     { "getch",          Nocurses_getch        },
-    { "getche",         Nocurses_getche       },
     { "clrline",        Nocurses_clrline      },
     { "resetcolors",    Nocurses_resetcolors  },
 #if defined(__unix__)    
