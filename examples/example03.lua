@@ -1,6 +1,6 @@
 local nocurses  = require("nocurses")
-local llthreads = require("llthreads2.ex")
-local mtmsg     = require("mtmsg")
+local llthreads = require("llthreads2.ex") -- https://luarocks.org/modules/moteus/lua-llthreads2
+local mtmsg     = require("mtmsg")         -- https://luarocks.org/modules/osch/mtmsg
 
 
 local function printf(...)

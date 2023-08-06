@@ -31,15 +31,39 @@ static const char* const NOCURSES_MODULE_NAME = "nocurses";
 /* ============================================================================================ */
 
 static AtomicCounter initStage = 0;
+static void*         udata = NULL;
+
+#define NC_READBUFLEN 256
 
 #if defined(__unix__)    
 
 static int            nc_awake_fds[2];
-static unsigned char  nc_readbuffer[128];
+static unsigned char  nc_readbuffer[NC_READBUFLEN];
 static size_t         nc_readlen = 0;
 static size_t         nc_readpos = 0;
+static size_t         nc_peekpos = 0;
 
 #endif /* __unix__ */
+
+
+
+/* ============================================================================================ */
+
+static int handleClosingLuaState(lua_State* L)
+{
+    bool unrestricted = false;
+    if (lua_rawgetp(L, LUA_REGISTRYINDEX, NOCURSES_MODULE_NAME) == LUA_TUSERDATA) {
+        if (lua_touserdata(L, -1) == udata) {
+            unrestricted = true;
+        }
+    }
+    lua_pop(L, 1);
+    if (unrestricted) {
+        if (atomic_set_if_equal(&initStage, 1, 0)) {
+        }
+    }
+    return 0;
+}
 
 /* ============================================================================================ */
 
@@ -94,12 +118,18 @@ static bool drainAwakePipe()
     return hasAwake;
 }
 
+static bool hasInputAt(int i)
+{
+    return (nc_readpos + i < nc_readlen);
+}
+
+static bool hasInput()
+{
+    return (nc_readpos < nc_readlen);
+}
 
 static bool waitForInput(const double timeout)
 {
-    if (nc_readpos < nc_readlen) {
-        return true;
-    }
     if (drainAwakePipe()) {
         return false;
     }
@@ -131,14 +161,14 @@ static bool waitForInput(const double timeout)
         ret                 = select(nfds, &fds, NULL, NULL, &tv);
     }
     bool hasSignal = (ret == -1) && (errno == EINTR);
-    bool hasInput  = (ret > 0) && (FD_ISSET(ifd, &fds));
+    bool hasInp    = (ret > 0) && (FD_ISSET(ifd, &fds));
     bool hasAwake  = (ret > 0) && (afd >= 0) && (FD_ISSET(afd, &fds));
     if (hasAwake || hasSignal) {
         drainAwakePipe();
     }
     tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
 
-    return hasInput;
+    return hasInp;
 }
 
 #endif /* __unix__ */
@@ -150,7 +180,7 @@ static int Nocurses_wait(lua_State* L)
 #if defined(__unix__)
     bool wasEnter = false;
     while (true) {
-        if (waitForInput(-1)) {
+        if (hasInput() || waitForInput(-1)) {
             if (fgetc(stdin) == '\n') {
                 break;
             }
@@ -314,14 +344,75 @@ static int nc_getch()
     if (nc_readpos < nc_readlen) {
         return nc_readbuffer[nc_readpos++];
     }
-    size_t len = read(fileno(stdin), nc_readbuffer, sizeof(nc_readbuffer));
+    size_t len = read(fileno(stdin), nc_readbuffer, NC_READBUFLEN);
     if (len > 0) {
         nc_readpos = 1;
         nc_readlen = len;
         return nc_readbuffer[0];
     }
     else {
+        nc_readpos = 0;
+        nc_readlen = 0;
         return -1;
+    }
+}
+
+static int nc_peekch(int offs)
+{
+    if (nc_readpos + offs < nc_readlen) {
+        return nc_readbuffer[nc_readpos + offs];
+    }
+    if (nc_readpos > 0 && nc_readpos < nc_readlen) {
+        memmove(nc_readbuffer, nc_readbuffer + nc_readpos, nc_readlen - nc_readpos);
+        nc_readlen -= nc_readpos;
+        nc_readpos = 0;
+    } else {
+        nc_readlen = 0;
+        nc_readpos = 0;
+    }   
+    if (nc_readlen < NC_READBUFLEN) {
+        size_t len = read(fileno(stdin), nc_readbuffer + nc_readlen, NC_READBUFLEN - nc_readlen);
+        if (len > 0) {
+            nc_readlen += len;
+        }
+    }
+    if (nc_readpos + offs < nc_readlen) {
+        return nc_readbuffer[nc_readpos + offs];
+    }
+    else {
+        return -1;
+    }
+}
+
+static int nc_skipch(int skip)
+{
+    if (nc_readpos + skip <= nc_readlen) {
+        nc_readpos += skip;
+        return skip;
+    }
+    if (nc_readpos > 0 && nc_readpos < nc_readlen) {
+        memmove(nc_readbuffer, nc_readbuffer + nc_readpos, nc_readlen - nc_readpos);
+        nc_readlen -= nc_readpos;
+        nc_readpos = 0;
+    } else {
+        nc_readlen = 0;
+        nc_readpos = 0;
+    }   
+    if (nc_readlen < NC_READBUFLEN) {
+        size_t len = read(fileno(stdin), nc_readbuffer + nc_readlen, NC_READBUFLEN - nc_readlen);
+        if (len > 0) {
+            nc_readlen += len;
+        }
+    }
+    if (nc_readpos + skip <= nc_readlen) {
+        nc_readpos += skip;
+        return skip;
+    }
+    else {
+        skip = nc_readlen - nc_readpos;
+        nc_readpos = 0;
+        nc_readlen = 0;
+        return skip;
     }
 }
 #endif
@@ -336,8 +427,8 @@ static int Nocurses_getch(lua_State* L)
         }
     }
 #if defined(__unix__)
-    bool hasInput = waitForInput(timeout);
-    if (hasInput) {
+    bool hasInp = hasInput() || waitForInput(timeout);
+    if (hasInp) {
         int c = nc_getch();
         if (c >= 0) {
             lua_pushinteger(L, c);
@@ -349,6 +440,62 @@ static int Nocurses_getch(lua_State* L)
     }
 #else
     lua_pushinteger(L, getch());
+#endif
+    return 1;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_peekch(lua_State* L)
+{
+    int offs = 0;
+    if (!lua_isnoneornil(L, 1)) {
+        offs = luaL_checkinteger(L, 1) - 1;
+    }
+    if (offs < 0) {
+        lua_pushnil(L);
+        return 1;
+    }
+#if defined(__unix__)
+    bool hasInp = hasInputAt(offs) || waitForInput(0 /* timeout */);
+    if (hasInp) {
+        int c = nc_peekch(offs);
+        if (c >= 0) {
+            lua_pushinteger(L, c);
+        } else {
+            lua_pushnil(L);
+        }
+    } else {
+        lua_pushnil(L);
+    }
+#else
+    lua_pushnil(L);
+#endif
+    return 1;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_skipch(lua_State* L)
+{
+    int skip = 1;
+    if (!lua_isnoneornil(L, 1)) {
+        skip = luaL_checkinteger(L, 1) ;
+    }
+    if (skip <= 0) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+#if defined(__unix__)
+    bool hasInp = hasInputAt(skip - 1) || waitForInput(0 /* timeout */);
+    if (hasInp) {
+        int skipped = nc_skipch(skip);
+        lua_pushinteger(L, skipped);
+    } else {
+        lua_pushinteger(L, 0);
+    }
+#else
+    lua_pushnil(L);
 #endif
     return 1;
 }
@@ -451,12 +598,53 @@ static const luaL_Reg ModuleFunctions[] =
     { "setcurshape",    Nocurses_setcurshape  },
     { "gettermsize",    Nocurses_gettermsize  },
     { "getch",          Nocurses_getch        },
+    { "peekch",         Nocurses_peekch       },
+    { "skipch",         Nocurses_skipch       },
     { "clrline",        Nocurses_clrline      },
     { "resetcolors",    Nocurses_resetcolors  },
 #if defined(__unix__)    
     { "awake",          Nocurses_awake        },
 #endif
     { NULL,             NULL           } /* sentinel */
+};
+
+/* ============================================================================================ */
+
+typedef struct {
+    const char* name;
+    const char* bytes;
+} InputSequence;
+
+static const InputSequence inputSequences[] =
+{
+    { "Up",        "\033[A"   },
+    { "Down",      "\033[B"   },
+    { "Right",     "\033[C"   },
+    { "Left",      "\033[D"   },
+    { "Home",      "\033[H"   },
+    { "End",       "\033[F"   },
+    { "Page_Up",   "\033[5~"  },
+    { "Page_Down", "\033[6~"  },
+    { "Backspace", "\177"     },
+    { "Backspace", "\010"     },
+    { "Tab",       "\011"     },
+    { "Delete",    "\033[3~"  },
+    { "Insert",    "\033[2~"  },
+    { "Escape",    "\033"     },
+    { "Enter",     "\n"       },
+    { "F1",        "\033OP"   },
+    { "F2",        "\033OQ"   },
+    { "F3",        "\033OR"   },
+    { "F4",        "\033OS"   },
+    { "F5",        "\033[15~" },
+    { "F6",        "\033[17~" },
+    { "F7",        "\033[18~" },
+    { "F8",        "\033[19~" },
+    { "F9",        "\033[20~" },
+    { "F10",       "\033[21~" },
+    { "F11",       "\033[23~" },
+    { "F12",       "\033[24~" },
+    { NULL, NULL }
 };
 
 /* ============================================================================================ */
@@ -473,6 +661,21 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
     #if defined(__unix__)
         initAwake();
     #endif
+        udata = lua_newuserdata(L, 1);                              /* -> sentinel */
+        lua_newtable(L);                                            /* -> sentinel, metatable */
+        lua_pushstring(L, "__gc");                                  /* -> sentinel, metatable, "__gc", callback */
+        lua_pushcfunction(L, handleClosingLuaState);                /* -> sentinel, metatable */
+        lua_rawset(L, -3);                                          /* -> sentinel, metatable */
+        lua_setmetatable(L, -2);                                    /* -> sentinel */
+        lua_rawsetp(L, LUA_REGISTRYINDEX, NOCURSES_MODULE_NAME);    /* -> */
+    }
+    else {
+        if (lua_rawgetp(L, LUA_REGISTRYINDEX, NOCURSES_MODULE_NAME) == LUA_TUSERDATA) {
+            if (lua_touserdata(L, -1) == udata) {
+                unrestricted = true;
+            }
+        }
+        lua_pop(L, 1);
     }
 
     /* ---------------------------------------- */
@@ -481,12 +684,18 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
     
     int module      = ++n; lua_newtable(L);
 
-    lua_pushvalue(L, module);
+    lua_pushvalue(L, module);            /* --> module */
     if (unrestricted) {
         luaL_setfuncs(L, ModuleFunctions, 0);
     } else {
         luaL_setfuncs(L, RestrictedModuleFunctions, 0);
     }
+    lua_newtable(L);                     /* --> module, key */
+    for (const InputSequence* seq = inputSequences; seq->name; ++seq) {
+        lua_pushstring(L, seq->name);    /* --> module, key, bytes */
+        lua_setfield(L, -2, seq->bytes); /* --> module, key */
+    }                                    /* --> module, key */
+    lua_setfield(L, -2, "keyt");          /* --> module */
     lua_pop(L, 1);
     
     lua_pushliteral(L, NOCURSES_VERSION_STRING);
@@ -500,6 +709,31 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
 #endif
     lua_pushstring(L, NOCURSES_MODULE_NAME);           /* -> meta, "nocurses" */
     lua_setfield(L, -2, "__metatable");                /* -> meta */
+    if (unrestricted) {
+        int rc = luaL_loadstring(L,                                 
+            "local t, k = ...\n"
+            "if type(k) == 'string' then\n"
+            "   local name = 'nocurses.'..k\n"
+            "   local found = package.loaded[name]\n"
+            "   if not found then\n"
+            "       for i, searcher in ipairs(package.searchers or package.loaders) do\n"
+            "           local loader, data = searcher(name)\n"
+            "           if type(loader) == 'function' then\n"
+            "               found = loader(data or name)\n"
+            "           end\n"
+            "       end\n"
+            "   end\n"
+            "   if found then\n"
+            "       t[k] = found\n"
+            "       return found\n"
+            "   end\n"
+            "end\n"
+        );                                             /* -> meta, indexFunc */
+        if (rc != 0) {
+            return lua_error(L);
+        }
+        lua_setfield(L, -2, "__index");                /* -> meta */
+    }
     lua_setmetatable(L, module);                       /* -> */
     
     lua_settop(L, module);

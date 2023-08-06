@@ -21,12 +21,13 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
-    nocurses = {
+    ["nocurses"] = {
       sources = { 
           "src/main.c",
           "src/nocurses_compat.c",
       },
       defines = { "NOCURSES_VERSION="..version:gsub("^(.*)-.-$", "%1") },
     },
+    ["nocurses.getkey"] = "src/nocurses/getkey.lua",
   }
 }
