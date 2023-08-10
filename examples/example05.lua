@@ -17,6 +17,8 @@ local function printCentered(y, ...)
     printf(message)
 end
 
+nocurses.hidecursor()
+
 while true do
     if redisplay then
         nocurses.clrscr();
@@ -58,6 +60,7 @@ while true do
     end
 end
 
+nocurses.showcursor()
 nocurses.gotoxy(1, screenHeight - 2)
 nocurses.clrline()
 printf("Finished.\n")

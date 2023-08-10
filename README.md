@@ -75,6 +75,8 @@ See also original documentation at https://github.com/LionyxML/nocurses.
         * [nocurses.settitle()](#nocurses_settitle)
         * [nocurses.setunderline()](#nocurses_setunderline)
         * [nocurses.wait()](#nocurses_wait)
+        * [nocurses.hidecursor()](#nocurses_hidecursor)
+        * [nocurses.showcursor()](#nocurses_showcursor)
    * [Color Names](#color-names)
    * [Shape Names](#shape-names)
 
@@ -267,6 +269,23 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   `**</a>
 
   Waits for the user to hit [ENTER].
+
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="nocurses_hidecursor">**`nocurses.hidecursor()
+  `**</a>
+
+  Hides the cursor. If the program exits, a hidden cursor is automatically made visible again.
+
+  See also: [`example05.lua`](./examples/example05.lua)
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <a id="nocurses_showcursor">**`nocurses.showcursor()
+  `**</a>
+
+  Makes the cursor visible. To be called after [nocurses.hidecursor()](#nocurses_hidecursor).
 
 
 <!-- ---------------------------------------------------------------------------------------- -->

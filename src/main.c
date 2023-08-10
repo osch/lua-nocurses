@@ -41,7 +41,7 @@ static int            nc_awake_fds[2];
 static unsigned char  nc_readbuffer[NC_READBUFLEN];
 static size_t         nc_readlen = 0;
 static size_t         nc_readpos = 0;
-static size_t         nc_peekpos = 0;
+static bool           nc_hidecur = 0;
 
 #endif /* __unix__ */
 
@@ -51,15 +51,20 @@ static size_t         nc_peekpos = 0;
 
 static int handleClosingLuaState(lua_State* L)
 {
-    bool unrestricted = false;
+    bool restricted = true;
     if (lua_rawgetp(L, LUA_REGISTRYINDEX, NOCURSES_MODULE_NAME) == LUA_TUSERDATA) {
         if (lua_touserdata(L, -1) == udata) {
-            unrestricted = true;
+            restricted = false;
         }
     }
     lua_pop(L, 1);
-    if (unrestricted) {
+    if (!restricted) {
         if (atomic_set_if_equal(&initStage, 1, 0)) {
+            if (nc_hidecur) {
+                nc_hidecur = false;
+                showcursor();
+                fflush(stdout);
+            }
         }
     }
     return 0;
@@ -123,6 +128,12 @@ static bool hasInputAt(int i)
     return (nc_readpos + i < nc_readlen);
 }
 
+static void clearInput()
+{
+    nc_readpos = 0;
+    nc_readlen = 0;
+}
+
 static bool hasInput()
 {
     return (nc_readpos < nc_readlen);
@@ -177,10 +188,10 @@ static bool waitForInput(const double timeout)
 
 static int Nocurses_wait(lua_State* L)
 {
+    clearInput();
 #if defined(__unix__)
-    bool wasEnter = false;
     while (true) {
-        if (hasInput() || waitForInput(-1)) {
+        if (waitForInput(-1)) {
             if (fgetc(stdin) == '\n') {
                 break;
             }
@@ -188,12 +199,10 @@ static int Nocurses_wait(lua_State* L)
             break;
         }
     }
-    lua_pushboolean(L, wasEnter);
 #else
     while (fgetc(stdin) != '\n');
-    lua_pushboolean(L, true);
 #endif
-    return 1;
+    return 0;
 }
 
 /* ============================================================================================ */
@@ -351,8 +360,7 @@ static int nc_getch()
         return nc_readbuffer[0];
     }
     else {
-        nc_readpos = 0;
-        nc_readlen = 0;
+        clearInput();
         return -1;
     }
 }
@@ -417,8 +425,31 @@ static int nc_skipch(int skip)
 }
 #endif
 
+/* ============================================================================================ */
+
+static int assureUnrestricted(lua_State* L)
+{
+    bool restricted = true;
+    if (lua_rawgetp(L, LUA_REGISTRYINDEX, NOCURSES_MODULE_NAME) == LUA_TUSERDATA) { // -> nocurses
+        if (lua_touserdata(L, -1) == udata) {                                       // -> nocurses
+            restricted = false;
+        }
+    }
+    lua_pop(L, 1); // -> 
+    if (restricted) {
+        return luaL_error(L, "function must be called from main thread");
+    }
+    else {
+        return 0;
+    }
+}
+
+/* ============================================================================================ */
+
 static int Nocurses_getch(lua_State* L)
 {
+    assureUnrestricted(L);
+
     double timeout = -1;
     if (!lua_isnoneornil(L, 1)) {
         timeout = luaL_checknumber(L, 1);
@@ -448,6 +479,8 @@ static int Nocurses_getch(lua_State* L)
 
 static int Nocurses_peekch(lua_State* L)
 {
+    assureUnrestricted(L);
+
     int offs = 0;
     if (!lua_isnoneornil(L, 1)) {
         offs = luaL_checkinteger(L, 1) - 1;
@@ -478,6 +511,8 @@ static int Nocurses_peekch(lua_State* L)
 
 static int Nocurses_skipch(lua_State* L)
 {
+    assureUnrestricted(L);
+
     int skip = 1;
     if (!lua_isnoneornil(L, 1)) {
         skip = luaL_checkinteger(L, 1) ;
@@ -514,6 +549,31 @@ static int Nocurses_clrline(lua_State* L)
 static int Nocurses_resetcolors(lua_State* L)
 {
     resetcolors();
+    fflush(stdout);
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_showcursor(lua_State* L)
+{
+    assureUnrestricted(L);
+    
+    nc_hidecur = false;
+    showcursor();
+    fflush(stdout);
+
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_hidecursor(lua_State* L)
+{
+    assureUnrestricted(L);
+
+    nc_hidecur = true;
+    hidecursor();
     fflush(stdout);
     return 0;
 }
@@ -602,6 +662,8 @@ static const luaL_Reg ModuleFunctions[] =
     { "skipch",         Nocurses_skipch       },
     { "clrline",        Nocurses_clrline      },
     { "resetcolors",    Nocurses_resetcolors  },
+    { "showcursor",     Nocurses_showcursor   },
+    { "hidecursor",     Nocurses_hidecursor   },
 #if defined(__unix__)    
     { "awake",          Nocurses_awake        },
 #endif
@@ -655,9 +717,9 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
 
     /* ---------------------------------------- */
 
-    bool unrestricted = false;
+    bool restricted = true;
     if (atomic_set_if_equal(&initStage, 0, 1)) {
-        unrestricted = true;
+        restricted = false;
     #if defined(__unix__)
         initAwake();
     #endif
@@ -672,7 +734,7 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
     else {
         if (lua_rawgetp(L, LUA_REGISTRYINDEX, NOCURSES_MODULE_NAME) == LUA_TUSERDATA) {
             if (lua_touserdata(L, -1) == udata) {
-                unrestricted = true;
+                restricted = false;
             }
         }
         lua_pop(L, 1);
@@ -685,10 +747,10 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
     int module      = ++n; lua_newtable(L);
 
     lua_pushvalue(L, module);            /* --> module */
-    if (unrestricted) {
-        luaL_setfuncs(L, ModuleFunctions, 0);
-    } else {
+    if (restricted) {
         luaL_setfuncs(L, RestrictedModuleFunctions, 0);
+    } else {
+        luaL_setfuncs(L, ModuleFunctions, 0);
     }
     lua_newtable(L);                     /* --> module, key */
     for (const InputSequence* seq = inputSequences; seq->name; ++seq) {
@@ -709,7 +771,7 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
 #endif
     lua_pushstring(L, NOCURSES_MODULE_NAME);           /* -> meta, "nocurses" */
     lua_setfield(L, -2, "__metatable");                /* -> meta */
-    if (unrestricted) {
+    if (!restricted) {
         int rc = luaL_loadstring(L,                                 
             "local t, k = ...\n"
             "if type(k) == 'string' then\n"

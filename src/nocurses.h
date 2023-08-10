@@ -243,3 +243,10 @@ static void resetcolors(){
     font_invert    = 0;
 }
 
+static void showcursor(){
+    printf(ESC"[?25h");
+}
+
+static void hidecursor(){
+    printf(ESC"[?25l");
+}
