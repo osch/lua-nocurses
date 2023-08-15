@@ -672,44 +672,6 @@ static const luaL_Reg ModuleFunctions[] =
 
 /* ============================================================================================ */
 
-typedef struct {
-    const char* name;
-    const char* bytes;
-} InputSequence;
-
-static const InputSequence inputSequences[] =
-{
-    { "Up",        "\033[A"   },
-    { "Down",      "\033[B"   },
-    { "Right",     "\033[C"   },
-    { "Left",      "\033[D"   },
-    { "Home",      "\033[H"   },
-    { "End",       "\033[F"   },
-    { "Page_Up",   "\033[5~"  },
-    { "Page_Down", "\033[6~"  },
-    { "Backspace", "\177"     },
-    { "Backspace", "\010"     },
-    { "Tab",       "\011"     },
-    { "Delete",    "\033[3~"  },
-    { "Insert",    "\033[2~"  },
-    { "Escape",    "\033"     },
-    { "Enter",     "\n"       },
-    { "F1",        "\033OP"   },
-    { "F2",        "\033OQ"   },
-    { "F3",        "\033OR"   },
-    { "F4",        "\033OS"   },
-    { "F5",        "\033[15~" },
-    { "F6",        "\033[17~" },
-    { "F7",        "\033[18~" },
-    { "F8",        "\033[19~" },
-    { "F9",        "\033[20~" },
-    { "F10",       "\033[21~" },
-    { "F11",       "\033[23~" },
-    { "F12",       "\033[24~" },
-    { NULL, NULL }
-};
-
-/* ============================================================================================ */
 
 DLL_PUBLIC int luaopen_nocurses(lua_State* L)
 {
@@ -752,12 +714,6 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
     } else {
         luaL_setfuncs(L, ModuleFunctions, 0);
     }
-    lua_newtable(L);                     /* --> module, key */
-    for (const InputSequence* seq = inputSequences; seq->name; ++seq) {
-        lua_pushstring(L, seq->name);    /* --> module, key, bytes */
-        lua_setfield(L, -2, seq->bytes); /* --> module, key */
-    }                                    /* --> module, key */
-    lua_setfield(L, -2, "keyt");          /* --> module */
     lua_pop(L, 1);
     
     lua_pushliteral(L, NOCURSES_VERSION_STRING);

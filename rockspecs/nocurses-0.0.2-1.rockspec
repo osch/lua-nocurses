@@ -1,9 +1,17 @@
 package = "nocurses"
-version = "0.0.1-1"
-local versionNumber = version:gsub("^(.*)-.-$", "%1")
+version = "0.0.2-1"
+local pkgVersion = version:gsub("^(.*)%-.-$", "%1")
+local url, dir
+if pkgVersion == "scm" then
+  url = "https://github.com/osch/lua-nocurses/archive/master.zip"
+  dir = "lua-nocurses-master"
+else 
+  url = "https://github.com/osch/lua-nocurses/archive/v"..pkgVersion..".zip"
+  dir = "lua-nocurses-"..pkgVersion
+end
 source = {
-  url = "https://github.com/osch/lua-nocurses/archive/v"..versionNumber..".zip",
-  dir = "lua-nocurses-"..versionNumber,
+  url = url,
+  dir = dir,
 }
 description = {
   summary = "A terminal screen manipulation library",
@@ -22,12 +30,13 @@ dependencies = {
 build = {
   type = "builtin",
   modules = {
-    nocurses = {
+    ["nocurses"] = {
       sources = { 
           "src/main.c",
           "src/nocurses_compat.c",
       },
-      defines = { "NOCURSES_VERSION="..versionNumber },
+      defines = { "NOCURSES_VERSION="..pkgVersion },
     },
+    ["nocurses.getkey"] = "src/nocurses/getkey.lua",
   }
 }
