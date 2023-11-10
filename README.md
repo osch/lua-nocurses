@@ -84,30 +84,30 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 ##   Module Functions
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_awake">**`nocurses.awake()
-  `**</a>
+* <span id="nocurses_awake">**`nocurses.awake()
+  `**</span>
 
   May be called from any thread to interrupt [nocurses.getch()](#nocurses_getch) on the main
   thread. The main thread is the first thread that loads the *nocurses* module.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_clrline">**`nocurses.clrline()
-  `**</a>
+* <span id="nocurses_clrline">**`nocurses.clrline()
+  `**</span>
 
   Clears the row contents.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_clrscr">**`nocurses.clrscr()
-  `**</a>
+* <span id="nocurses_clrscr">**`nocurses.clrscr()
+  `**</span>
 
   Clears the screen.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_getch">**`nocurses.getch([timeout])
-  `**</a>
+* <span id="nocurses_getch">**`nocurses.getch([timeout])
+  `**</span>
 
   Gets a character byte without waiting for enter.
   
@@ -133,8 +133,8 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   Otherwise this function returns the obtained character byte as integer value.
 
 <!-- ---------------------------------------------------------------------------------------- -->
-* <a id="nocurses_peekch">**`nocurses.peekch([cnt])
-  `**</a>
+* <span id="nocurses_peekch">**`nocurses.peekch([cnt])
+  `**</span>
   
   Obtains next character byte from the input queue without consuming the character, i.e.
   a subsequent call to [nocurses.getch()](#nocurses_getch) will deliver this byte again.
@@ -149,8 +149,8 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   The input character byte is returned as integer value.
 
 <!-- ---------------------------------------------------------------------------------------- -->
-* <a id="nocurses_skipch">**`nocurses.skipch([cnt])
-  `**</a>
+* <span id="nocurses_skipch">**`nocurses.skipch([cnt])
+  `**</span>
 
   Discards bytes in the input queue.
 
@@ -164,8 +164,8 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   This funtion returns the number of bytes skipped in the input queue.
   
 <!-- ---------------------------------------------------------------------------------------- -->
-* <a id="nocurses_getkey">**`nocurses.getkey([timeout])
-  `**</a>
+* <span id="nocurses_getkey">**`nocurses.getkey([timeout])
+  `**</span>
 
   Returns the name of the pressed key as string.
   
@@ -188,93 +188,93 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_gettermsize">**`nocurses.gettermsize()
-  `**</a>
+* <span id="nocurses_gettermsize">**`nocurses.gettermsize()
+  `**</span>
 
   Gets the columns and rows of the terminal.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_gotoxy">**`nocurses.gotoxy(x, y)
-  `**</a>
+* <span id="nocurses_gotoxy">**`nocurses.gotoxy(x, y)
+  `**</span>
 
   Sets the cursor do the position x, y. Where x is the row number and y the line number.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_resetcolors">**`nocurses.resetcolors()
-  `**</a>
+* <span id="nocurses_resetcolors">**`nocurses.resetcolors()
+  `**</span>
 
   Reset terminal to default colors.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setbgrcolor">**`nocurses.setbgrcolor(colorName)
-  `**</a>
+* <span id="nocurses_setbgrcolor">**`nocurses.setbgrcolor(colorName)
+  `**</span>
 
   Sets the background color to one of the colors described on the color table below.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setblink">**`nocurses.setblink(status)
-  `**</a>
+* <span id="nocurses_setblink">**`nocurses.setblink(status)
+  `**</span>
 
   Sets the blink attribute on or off. *status* can be *true* or *false*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setcurshape">**`nocurses.setcurshape(shapeName)
-  `**</a>
+* <span id="nocurses_setcurshape">**`nocurses.setcurshape(shapeName)
+  `**</span>
 
   Sets the shape of the cursor in the terminal in the shape table below.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setfontbold">**`nocurses.setfontbold(status)
-  `**</a>
+* <span id="nocurses_setfontbold">**`nocurses.setfontbold(status)
+  `**</span>
 
   Sets the bold attribute on or off. *status* can be *true* or *false*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setfontcolor">**`nocurses.setfontcolor(colorName)
-  `**</a>
+* <span id="nocurses_setfontcolor">**`nocurses.setfontcolor(colorName)
+  `**</span>
 
   Sets the text color to one of the colors described on the color table below.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setinvert">**`nocurses.setinvert(status)
-  `**</a>
+* <span id="nocurses_setinvert">**`nocurses.setinvert(status)
+  `**</span>
 
   Sets the invert attribute on or off. *status* can be *true* or *false*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_settitle">**`nocurses.settitle(title)
-  `**</a>
+* <span id="nocurses_settitle">**`nocurses.settitle(title)
+  `**</span>
 
   Sets the title of the terminal.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_setunderline">**`nocurses.setunderline(status)
-  `**</a>
+* <span id="nocurses_setunderline">**`nocurses.setunderline(status)
+  `**</span>
 
   Sets the underline attribute on or off. *status* can be *true* or *false*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_wait">**`nocurses.wait()
-  `**</a>
+* <span id="nocurses_wait">**`nocurses.wait()
+  `**</span>
 
   Waits for the user to hit [ENTER].
 
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_hidecursor">**`nocurses.hidecursor()
-  `**</a>
+* <span id="nocurses_hidecursor">**`nocurses.hidecursor()
+  `**</span>
 
   Hides the cursor. If the program exits, a hidden cursor is automatically made visible again.
 
@@ -282,8 +282,8 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
-* <a id="nocurses_showcursor">**`nocurses.showcursor()
-  `**</a>
+* <span id="nocurses_showcursor">**`nocurses.showcursor()
+  `**</span>
 
   Makes the cursor visible. To be called after [nocurses.hidecursor()](#nocurses_hidecursor).
 
