@@ -1,5 +1,5 @@
 package = "nocurses"
-version = "0.1.0-1"
+version = "scm-0"
 local pkgVersion = version:gsub("^(.*)%-.-$", "%1")
 local url, dir
 if pkgVersion == "scm" then
