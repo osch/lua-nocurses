@@ -31,7 +31,11 @@ while true do
         redisplay = false
     end
 
-    local key = nocurses.getkey() -- might be nil if terminal size changes
+    local key, input = nocurses.getkey() -- might be nil if terminal size changes
+    
+    if not key then
+        key = string.upper(input)
+    end
 
     local w, h = nocurses.gettermsize()
     if w ~= screenWidth or h ~= screenHeight then
@@ -39,7 +43,7 @@ while true do
         redisplay = true
     end
     if key then
-        if key == "Q" or key == "q" then
+        if key == "Q" then
             break                                                                                         
     
         elseif key == "Up" then

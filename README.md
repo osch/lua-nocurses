@@ -59,12 +59,22 @@ See also original documentation at https://github.com/LionyxML/nocurses.
         * [nocurses.awake()](#nocurses_awake)
         * [nocurses.clrline()](#nocurses_clrline)
         * [nocurses.clrscr()](#nocurses_clrscr)
+        * [nocurses.clrtoeol()](#nocurses_clrtoeol)
+        * [nocurses.clrtoeos()](#nocurses_clrtoeos)
+        * [nocurses.setraw()](#nocurses_setraw)
+        * [nocurses.israw()](#nocurses_israw)
         * [nocurses.getch()](#nocurses_getch)
         * [nocurses.peekch()](#nocurses_peekch)
         * [nocurses.skipch()](#nocurses_skipch)
         * [nocurses.getkey()](#nocurses_getkey)
+        * [nocurses.getxy()](#nocurses_getxy)
         * [nocurses.gettermsize()](#nocurses_gettermsize)
         * [nocurses.gotoxy()](#nocurses_gotoxy)
+        * [nocurses.gotox)](#nocurses_gotox)
+        * [nocurses.up()](#nocurses_up)
+        * [nocurses.down()](#nocurses_down)
+        * [nocurses.left()](#nocurses_left)
+        * [nocurses.right()](#nocurses_right)
         * [nocurses.resetcolors()](#nocurses_resetcolors)
         * [nocurses.setbgrcolor()](#nocurses_setbgrcolor)
         * [nocurses.setblink()](#nocurses_setblink)
@@ -79,6 +89,7 @@ See also original documentation at https://github.com/LionyxML/nocurses.
         * [nocurses.showcursor()](#nocurses_showcursor)
    * [Color Names](#color-names)
    * [Shape Names](#shape-names)
+   * [Control Sequences](#control-sequences)
 
 <!-- ---------------------------------------------------------------------------------------- -->
 ##   Module Functions
@@ -103,6 +114,47 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   `**</span>
 
   Clears the screen.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_clrtoeol">**`nocurses.clrtoeol()
+  `**</span>
+
+  Clears from cursor position to the end of the line.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_clrtoeos">**`nocurses.clrtoeos()
+  `**</span>
+
+  Clears from cursor position to the end of the screen.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_setraw">**`nocurses.setraw([enable])
+  `**</span>
+
+  Sets terminal to raw input mode.
+
+  * *enable* - optional boolean, *true* to enable raw mode, *false* to disable raw mode,
+               default value is *true*.
+  
+  Raw input mode is needed to get keystrokes from the operation system.
+  If you invoke [nocurses.getch()](#nocurses_getch) without explicitly setting the raw mode 
+  via **setraw(true)**, the raw mode is enabled implicitly by the function **getch()**
+  and disabled on exit of this function. This is suitable for playing around on the lua 
+  commandline interactively but for real world programs it is recommended to enter
+  the raw mode at program and keep this mode until program termination.
+  
+  On normal program termination (i.e. destruction of the lua_State) the raw mode is disabled
+  automatically by *nocurses*.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_israw">**`nocurses.israw()
+  `**</span>
+  
+  Returns *true* if *setraw(true)* was ivoked, otherwise *false*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -167,7 +219,7 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 * <span id="nocurses_getkey">**`nocurses.getkey([timeout])
   `**</span>
 
-  Returns the name of the pressed key as string.
+  Returns the name of the pressed key as string and the input bytes for this key.
   
   This function is implemented in Lua (see [`getkey.lua`](./src/nocurses/getkey.lua)) 
   using the low level functions [getch()](#nocurses_getch), 
@@ -178,13 +230,24 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   
   The timout handling is the same as in the function [nocurses.getch()](#nocurses_getch).
 
-  If a pressed key could be determined, this functions returns the key name as string
-  and the consumed raw input bytes as string.  
+  If a special control key is recognized (e.g. arrow keys) , this function returns the 
+  key name as string and the consumed raw input bytes as string.  
 
-  If the pressed key could not be determined from the input byte sequence, this functions 
-  returns the boolean value *false*  and the consumed raw input bytes as string.
+  If a special key name could not be determined (e.h. normal letter key) from the input 
+  byte sequence, this function returns the boolean value *false*  and the consumed 
+  raw input bytes as string.
   
   See also: [`example05.lua`](./examples/example05.lua)
+
+<!-- ---------------------------------------------------------------------------------------- -->
+* <span id="nocurses_getxy">**`nocurses.getxy()
+  `**</span>
+
+  Returns the current cursor position x, y. Where x is the column number and y the row number.
+  
+  This function is implemented in Lua (see [`getxy.lua`](./src/nocurses/getxy.lua)) using the 
+  function [getkey()](#nocurses_getkey).
+
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -199,6 +262,56 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   `**</span>
 
   Sets the cursor do the position x, y. Where x is the row number and y the line number.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_gotox">**`nocurses.gotox(x)
+  `**</span>
+
+  Sets the cursor do the column x.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_up">**`nocurses.up([d])
+  `**</span>
+
+  Moves the cursor upward.
+
+  * *d* - optional integer, number of rows the cursor should be moved, 
+          default value is 1. May be negative for moving the cursor downward.
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_down">**`nocurses.down([d])
+  `**</span>
+
+  Moves the cursor downward.
+
+  * *d* - optional integer, number of rows the cursor should be moved, 
+          default value is 1. May be negative for moving the cursor upward.
+
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_left">**`nocurses.left([d])
+  `**</span>
+
+  Moves the cursor leftward.
+
+  * *d* - optional integer, number of columns the cursor should be moved, 
+          default value is 1. May be negative for moving the cursor rightward.
+
+
+<!-- ---------------------------------------------------------------------------------------- -->
+
+* <span id="nocurses_right">**`nocurses.right([d])
+  `**</span>
+
+  Moves the cursor rightward.
+
+  * *d* - optional integer, number of columns the cursor should be moved, 
+          default value is 1. May be negative for moving the cursor leftward.
+
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -293,6 +406,7 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 <!-- ---------------------------------------------------------------------------------------- -->
 
 Valid color names are:
+  * DEFAULT
   * BLACK
   * RED
   * GREEN
@@ -307,12 +421,19 @@ Valid color names are:
 <!-- ---------------------------------------------------------------------------------------- -->
 
 Valid shape names are:
+  * DEFAULT
   * BLOCK_BLINK
   * BLOCK
   * UNDERLINE_BLINK
   * UNDERLINE
   * BAR_BLINK
   * BAR
+
+<!-- ---------------------------------------------------------------------------------------- -->
+##   Control Sequences
+<!-- ---------------------------------------------------------------------------------------- -->
+
+See table *nocurses.seq* for predefined control sequences.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 

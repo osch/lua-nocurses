@@ -63,8 +63,11 @@ static int handleClosingLuaState(lua_State* L)
             if (nc_hidecur) {
                 nc_hidecur = false;
                 showcursor();
-                fflush(stdout);
             }
+            if (isRaw) {
+                setRaw(false);
+            }
+            fflush(stdout);
         }
     }
     return 0;
@@ -210,7 +213,6 @@ static int Nocurses_wait(lua_State* L)
 static int Nocurses_clrscr(lua_State* L)
 {
     clrscr();
-    fflush(stdout);
     return 0;
 }
 
@@ -221,7 +223,67 @@ static int Nocurses_gotoxy(lua_State* L)
     int x = luaL_checkinteger(L, 1);
     int y = luaL_checkinteger(L, 2);
     gotoxy(x, y);
-    fflush(stdout);
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_gotox(lua_State* L)
+{
+    int x = luaL_checkinteger(L, 1);
+    printf(SEQ(goto_col), x);
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_up(lua_State* L)
+{
+    int d = luaL_optinteger(L, 1, 1);
+    if (d > 0) {
+        printf(SEQ(go_up), d);
+    } else if (d < 0) {
+        printf(SEQ(go_down), -d);
+    }
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_down(lua_State* L)
+{
+    int d = luaL_optinteger(L, 1, 1);
+    if (d > 0) {
+        printf(SEQ(go_down), d);
+    } else if (d < 0) {
+        printf(SEQ(go_up), -d);
+    }
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_left(lua_State* L)
+{
+    int d = luaL_optinteger(L, 1, 1);
+    if (d > 0) {
+        printf(SEQ(go_left), d);
+    } else if (d < 0) {
+        printf(SEQ(go_right), -d);
+    }
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_right(lua_State* L)
+{
+    int d = luaL_optinteger(L, 1, 1);
+    if (d > 0) {
+        printf(SEQ(go_right), d);
+    } else if (d < 0) {
+        printf(SEQ(go_left), -d);
+    }
     return 0;
 }
 
@@ -229,14 +291,15 @@ static int Nocurses_gotoxy(lua_State* L)
 
 static const char* const colors[] =
 {
-   "BLACK",
-   "RED",
-   "GREEN",
-   "YELLOW",
-   "BLUE",
-   "MAGENTA",
-   "CYAN",
-   "WHITE",
+   "BLACK",   // 0
+   "RED",     // 1
+   "GREEN",   // 2
+   "YELLOW",  // 3
+   "BLUE",    // 4
+   "MAGENTA", // 5
+   "CYAN",    // 6
+   "WHITE",   // 7
+   "DEFAULT", // 8
     NULL
 };
 
@@ -245,8 +308,10 @@ static const char* const colors[] =
 static int Nocurses_setfontcolor(lua_State* L)
 {
     int color = luaL_checkoption(L, 1, NULL, colors);
+    if (color == 8) {
+        color = 9; // Default
+    }
     setfontcolor(color);
-    fflush(stdout);
     return 0;
 }
 
@@ -256,7 +321,6 @@ static int Nocurses_setbgrcolor(lua_State* L)
 {
     int color = luaL_checkoption(L, 1, NULL, colors);
     setbgrcolor(color);
-    fflush(stdout);
     return 0;
 }
 
@@ -267,7 +331,6 @@ static int Nocurses_setfontbold(lua_State* L)
     luaL_checktype(L, 1, LUA_TBOOLEAN);
     int flag = lua_toboolean(L, 1);
     setfontbold(flag);
-    fflush(stdout);
     return 0;
 }
 
@@ -278,7 +341,6 @@ static int Nocurses_setunderline(lua_State* L)
     luaL_checktype(L, 1, LUA_TBOOLEAN);
     int flag = lua_toboolean(L, 1);
     setunderline(flag);
-    fflush(stdout);
     return 0;
 }
 
@@ -289,7 +351,6 @@ static int Nocurses_setblink(lua_State* L)
     luaL_checktype(L, 1, LUA_TBOOLEAN);
     int flag = lua_toboolean(L, 1);
     setblink(flag);
-    fflush(stdout);
     return 0;
 }
 
@@ -300,7 +361,6 @@ static int Nocurses_setinvert(lua_State* L)
     luaL_checktype(L, 1, LUA_TBOOLEAN);
     int flag = lua_toboolean(L, 1);
     setinvert(flag);
-    fflush(stdout);
     return 0;
 }
 
@@ -310,7 +370,6 @@ static int Nocurses_settitle(lua_State* L)
 {
     const char* title = luaL_checkstring(L, 1);
     settitle(title);
-    fflush(stdout);
     return 0;
 }
 
@@ -318,6 +377,7 @@ static int Nocurses_settitle(lua_State* L)
 
 static const char* const shapes[] =
 {
+    "DEFAULT",
     "BLOCK_BLINK",
     "BLOCK",
     "UNDERLINE_BLINK",
@@ -329,9 +389,8 @@ static const char* const shapes[] =
 
 static int Nocurses_setcurshape(lua_State* L)
 {
-    int shape = 1 + luaL_checkoption(L, 1, NULL, shapes);
+    int shape = luaL_checkoption(L, 1, NULL, shapes);
     setcurshape(shape);
-    fflush(stdout);
     return 0;
 }
 
@@ -448,6 +507,8 @@ static int assureUnrestricted(lua_State* L)
 
 static int Nocurses_getch(lua_State* L)
 {
+    fflush(stdout);
+
     assureUnrestricted(L);
 
     double timeout = -1;
@@ -479,18 +540,26 @@ static int Nocurses_getch(lua_State* L)
 
 static int Nocurses_peekch(lua_State* L)
 {
+    fflush(stdout);
+
     assureUnrestricted(L);
 
     int offs = 0;
     if (!lua_isnoneornil(L, 1)) {
         offs = luaL_checkinteger(L, 1) - 1;
+        if (offs < 0 || offs >= NC_READBUFLEN) {
+            return luaL_argerror(L, 1, "invalid offset");
+        }
     }
-    if (offs < 0) {
-        lua_pushnil(L);
-        return 1;
+    double timeout = 0;
+    if (!lua_isnoneornil(L, 2)) {
+        timeout = luaL_checknumber(L, 2);
+        if (timeout < 0){
+            timeout = 0;
+        }
     }
 #if defined(__unix__)
-    bool hasInp = hasInputAt(offs) || waitForInput(0 /* timeout */);
+    bool hasInp = hasInputAt(offs) || waitForInput(timeout);
     if (hasInp) {
         int c = nc_peekch(offs);
         if (c >= 0) {
@@ -511,6 +580,8 @@ static int Nocurses_peekch(lua_State* L)
 
 static int Nocurses_skipch(lua_State* L)
 {
+    fflush(stdout);
+
     assureUnrestricted(L);
 
     int skip = 1;
@@ -540,7 +611,22 @@ static int Nocurses_skipch(lua_State* L)
 static int Nocurses_clrline(lua_State* L)
 {
     clrline();
-    fflush(stdout);
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_clrtoeol(lua_State* L)
+{
+    printf(SEQ(clear_to_eol));
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_clrtoeos(lua_State* L)
+{
+    printf(SEQ(clear_to_eos));
     return 0;
 }
 
@@ -549,7 +635,6 @@ static int Nocurses_clrline(lua_State* L)
 static int Nocurses_resetcolors(lua_State* L)
 {
     resetcolors();
-    fflush(stdout);
     return 0;
 }
 
@@ -561,7 +646,6 @@ static int Nocurses_showcursor(lua_State* L)
     
     nc_hidecur = false;
     showcursor();
-    fflush(stdout);
 
     return 0;
 }
@@ -574,8 +658,52 @@ static int Nocurses_hidecursor(lua_State* L)
 
     nc_hidecur = true;
     hidecursor();
-    fflush(stdout);
     return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_setraw(lua_State* L)
+{
+    assureUnrestricted(L);
+    
+    bool raw = true;
+    
+    if (!lua_isnoneornil(L, 1)) {
+        raw = lua_toboolean(L, 1);
+    }
+    
+    setRaw(raw);
+
+    return 0;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_israw(lua_State* L)
+{
+    assureUnrestricted(L);
+    
+    lua_pushboolean(L, isRaw);
+    
+    return 1;
+}
+
+/* ============================================================================================ */
+
+static int Nocurses_isatty(lua_State* L)
+{
+    assureUnrestricted(L);
+    
+    luaL_Stream* stream = (luaL_Stream*) luaL_checkudata(L, 1, LUA_FILEHANDLE);
+    
+    if (stream->f) {
+        lua_pushboolean(L, isatty(fileno(stream->f)));
+    } else {
+        lua_pushboolean(L, false);
+    }
+    
+    return 1;
 }
 
 /* ============================================================================================ */
@@ -648,6 +776,11 @@ static const luaL_Reg ModuleFunctions[] =
     { "wait",           Nocurses_wait         },
     { "clrscr",         Nocurses_clrscr       },
     { "gotoxy",         Nocurses_gotoxy       },
+    { "gotox",          Nocurses_gotox        },
+    { "up",             Nocurses_up           },
+    { "down",           Nocurses_down         },
+    { "left",           Nocurses_left         },
+    { "right",          Nocurses_right        },
     { "setfontcolor",   Nocurses_setfontcolor },
     { "setbgrcolor",    Nocurses_setbgrcolor  },
     { "setfontbold",    Nocurses_setfontbold  },
@@ -661,17 +794,39 @@ static const luaL_Reg ModuleFunctions[] =
     { "peekch",         Nocurses_peekch       },
     { "skipch",         Nocurses_skipch       },
     { "clrline",        Nocurses_clrline      },
+    { "clrtoeol",       Nocurses_clrtoeol     },
+    { "clrtoeos",       Nocurses_clrtoeos     },
     { "resetcolors",    Nocurses_resetcolors  },
     { "showcursor",     Nocurses_showcursor   },
     { "hidecursor",     Nocurses_hidecursor   },
 #if defined(__unix__)    
     { "awake",          Nocurses_awake        },
 #endif
+    { "setraw",         Nocurses_setraw       },
+    { "israw",          Nocurses_israw        },
+    { "isatty",         Nocurses_isatty       },
     { NULL,             NULL           } /* sentinel */
 };
 
 /* ============================================================================================ */
 
+typedef struct {
+    const char* name;
+    const char* value;
+} StringVal;
+
+
+static const StringVal seqStrings[] = 
+{
+    #define SEQ_DEF(n,v) { #n, SEQ_##n },
+        SEQUENCE_DEFINES
+    #undef SEQ_DEF
+
+    { NULL, NULL                      } /* sentinel */
+};
+
+
+/* ============================================================================================ */
 
 DLL_PUBLIC int luaopen_nocurses(lua_State* L)
 {
@@ -708,13 +863,21 @@ DLL_PUBLIC int luaopen_nocurses(lua_State* L)
     
     int module      = ++n; lua_newtable(L);
 
-    lua_pushvalue(L, module);            /* --> module */
+    lua_pushvalue(L, module);              /* --> module */
     if (restricted) {
         luaL_setfuncs(L, RestrictedModuleFunctions, 0);
     } else {
         luaL_setfuncs(L, ModuleFunctions, 0);
     }
-    lua_pop(L, 1);
+    
+    lua_newtable(L);                       /* --> module, seq */
+    for (const StringVal* entry = seqStrings; entry->name; ++entry) {
+        lua_pushstring(L, entry->name);    /* --> module, seq, key */
+        lua_pushstring(L, entry->value);   /* --> module, seq, key, value */
+        lua_rawset(L, -3);                 /* --> module, seq */
+    }
+    lua_setfield(L, -2, "seq");            /* --> module */
+    lua_pop(L, 1);                         /* --> */
     
     lua_pushliteral(L, NOCURSES_VERSION_STRING);
     lua_setfield(L, module, "_VERSION");
