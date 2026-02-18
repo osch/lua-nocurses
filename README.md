@@ -154,7 +154,7 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 * <span id="nocurses_israw">**`nocurses.israw()
   `**</span>
   
-  Returns *true* if *setraw(true)* was ivoked, otherwise *false*.
+  Returns *true* if *setraw(true)* was invoked, otherwise *false*.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -213,7 +213,7 @@ See also original documentation at https://github.com/LionyxML/nocurses.
   This function does not wait and will skip only input bytes in the queue that are immediately 
   available.
   
-  This funtion returns the number of bytes skipped in the input queue.
+  This function returns the number of bytes skipped in the input queue.
   
 <!-- ---------------------------------------------------------------------------------------- -->
 * <span id="nocurses_getkey">**`nocurses.getkey([timeout])
@@ -228,12 +228,12 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 
   * *timeout* - optional float, timeout in seconds.
   
-  The timout handling is the same as in the function [nocurses.getch()](#nocurses_getch).
+  The timeout handling is the same as in the function [nocurses.getch()](#nocurses_getch).
 
   If a special control key is recognized (e.g. arrow keys) , this function returns the 
   key name as string and the consumed raw input bytes as string.  
 
-  If a special key name could not be determined (e.h. normal letter key) from the input 
+  If a special key name could not be determined (e.g. normal letter key) from the input 
   byte sequence, this function returns the boolean value *false*  and the consumed 
   raw input bytes as string.
   
@@ -261,14 +261,14 @@ See also original documentation at https://github.com/LionyxML/nocurses.
 * <span id="nocurses_gotoxy">**`nocurses.gotoxy(x, y)
   `**</span>
 
-  Sets the cursor do the position x, y. Where x is the row number and y the line number.
+  Sets the cursor to the position x, y. Where x is the column number and y the row number.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
 * <span id="nocurses_gotox">**`nocurses.gotox(x)
   `**</span>
 
-  Sets the cursor do the column x.
+  Sets the cursor to the column x.
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
@@ -433,7 +433,93 @@ Valid shape names are:
 ##   Control Sequences
 <!-- ---------------------------------------------------------------------------------------- -->
 
-See table *nocurses.seq* for predefined control sequences.
+The *nocurses.seq* table contains predefined VT100 escape sequences for terminal control. These sequences can be used directly via `io.write()` or other output functions for advanced terminal manipulation.
+
+**Screen Control Sequences:**
+   * `clear_screen` - Clear entire screen (`ESC[2J`)
+   * `clear_to_eol` - Clear from cursor to end of line (`ESC[0K`)
+   * `clear_to_eos` - Clear from cursor to end of screen (`ESC[0J`)
+   * `clear_line` - Clear current line (`ESC[2K`)
+   * `use_alt_buff` - Switch to alternate screen buffer (`ESC[?1049h`)
+   * `use_main_buff` - Switch to main screen buffer (`ESC[?1049l`)
+
+**Cursor Positioning Sequences:**
+   * `goto_row_col` - Move cursor to row and column, format: `ESC[%d;%dH` (row, col)
+   * `goto_col` - Move cursor to column, format: `ESC[%dG` (column)
+   * `go_home` - Move cursor to home position (`ESC[H`)
+   * `go_up` - Move cursor up, format: `ESC[%dA` (distance)
+   * `go_down` - Move cursor down, format: `ESC[%dB` (distance)
+   * `go_left` - Move cursor left, format: `ESC[%dD` (distance)
+   * `go_right` - Move cursor right, format: `ESC[%dC` (distance)
+
+**Cursor Shape and Visibility Sequences:**
+   * `set_cur_shape` - Set cursor shape, format: `ESC[%d q` (shape code)
+   * `set_cur_shape_default` - Set cursor to default shape (`ESC[0 q`)
+   * `set_cur_shape_block_blink` - Set cursor to blinking block (`ESC[1 q`)
+   * `set_cur_shape_block` - Set cursor to solid block (`ESC[2 q`)
+   * `set_cur_shape_underline_blink` - Set cursor to blinking underline (`ESC[3 q`)
+   * `set_cur_shape_underline` - Set cursor to solid underline (`ESC[4 q`)
+   * `set_cur_shape_bar_blink` - Set cursor to blinking bar (`ESC[5 q`)
+   * `set_cur_shape_bar` - Set cursor to solid bar (`ESC[6 q`)
+   * `show_cur` - Show cursor (`ESC[?25h`)
+   * `hide_cur` - Hide cursor (`ESC[?25l`)
+
+**Text Attributes (Building Blocks):**
+   * `attrs_begin` - Start attribute sequence (`ESC[`)
+   * `attrs_next` - Separator between attributes (`;`)
+   * `attrs_end` - End attribute sequence (`m`)
+   * `attr_bold` - Bold attribute (`1`)
+   * `attr_dim` - Dim attribute (`2`)
+   * `attr_italic` - Italic attribute (`3`)
+   * `attr_underline` - Underline attribute (`4`)
+   * `attr_blink` - Blink attribute (`5`)
+   * `attr_inverse` - Inverse/reverse video attribute (`7`)
+   * `attr_reset` - Reset all attributes (`0`)
+
+**Foreground Color Codes (for building attributes):**
+   * `attr_foregrd_black` - Black (`30`)
+   * `attr_foregrd_red` - Red (`31`)
+   * `attr_foregrd_green` - Green (`32`)
+   * `attr_foregrd_yellow` - Yellow (`33`)
+   * `attr_foregrd_blue` - Blue (`34`)
+   * `attr_foregrd_magenta` - Magenta (`35`)
+   * `attr_foregrd_cyan` - Cyan (`36`)
+   * `attr_foregrd_white` - White (`37`)
+   * `attr_foregrd_default` - Default foreground color (`39`)
+
+**Background Color Codes (for building attributes):**
+   * `attr_backgrd_black` - Black (`40`)
+   * `attr_backgrd_red` - Red (`41`)
+   * `attr_backgrd_green` - Green (`42`)
+   * `attr_backgrd_yellow` - Yellow (`43`)
+   * `attr_backgrd_blue` - Blue (`44`)
+   * `attr_backgrd_magenta` - Magenta (`45`)
+   * `attr_backgrd_cyan` - Cyan (`46`)
+   * `attr_backgrd_white` - White (`47`)
+   * `attr_backgrd_default` - Default background color (`49`)
+
+**Convenience Sequences (pre-formatted):**
+   * `reset_attrs` - Reset all attributes (`ESC[0m`)
+   * `set_foregrd_color` - Set foreground color, format: `ESC[3%dm` (color code 0-7)
+   * `set_backgrd_color` - Set background color, format: `ESC[4%dm` (color code 0-7)
+   * `set_attr_bold` - Set bold (`ESC[1m`)
+   * `set_attr_underline` - Set underline (`ESC[4m`)
+   * `set_attr_blink` - Set blink (`ESC[5m`)
+   * `set_attr_inverse` - Set inverse video (`ESC[7m`)
+   * `set_title` - Set terminal window title, format: `ESC]0;%s\x7` (title string)
+
+**Cursor Position Query:**
+   * `request_cur_pos` - Request current cursor position (`ESC[6n`)
+   * `response_cur_pos` - Parse cursor position response, pattern: `ESC[(%d+);(%d+)R` (row; col)
+
+**Example Usage:**
+```lua
+local nocurses = require('nocurses')
+io.write(nocurses.seq.clear_screen)      -- Clear screen
+io.write(nocurses.seq.set_attr_bold)     -- Make text bold
+io.write("Bold text")
+io.write(nocurses.seq.reset_attrs)       -- Reset to normal
+```
 
 <!-- ---------------------------------------------------------------------------------------- -->
 
